@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+		<title>AVA</title>
+		<style>
+html, body, #canvas {
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+body {
+	color: white;
+	background-color: black;
+	overflow: hidden;
+	touch-action: none;
+}
+
+#canvas {
+	display: block;
+}
+
+#canvas:focus {
+	outline: none;
+}
+
+
+/* L'écran de chargement d'AVA (27/10/2026) : les deux énergies (or de la Lumière à gauche, violet de l'Ombre à droite,
+   comme l'écran de connexion), des particules qui montent, la flamme de l'Éther qui vacille, et la barre de chargement. */
+#status {
+	background: #0A0620;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	visibility: hidden;
+	overflow: hidden;
+	font-family: 'Trebuchet MS', 'Segoe UI', Arial, sans-serif;
+}
+#ava-fond-lumiere, #ava-fond-ombre {
+	position: absolute; top: 0; bottom: 0; left: 0; right: 0;
+}
+#ava-fond-ombre {
+	background: radial-gradient(ellipse 60% 45% at 72% 42%, rgba(154, 92, 255, 0.32), transparent 70%),
+		linear-gradient(#3A1680, #1E0C4E 50%, #0A0620);
+}
+#ava-fond-lumiere {
+	background: radial-gradient(ellipse 60% 45% at 28% 42%, rgba(255, 201, 74, 0.30), transparent 70%),
+		linear-gradient(#A8741C, #6E440E 50%, #301A08);
+	-webkit-mask-image: linear-gradient(90deg, #000 0%, #000 45%, transparent 55%);
+	mask-image: linear-gradient(90deg, #000 0%, #000 45%, transparent 55%);
+}
+#ava-frontiere {
+	position: absolute; top: 0; bottom: 0; left: 50%; width: 70px; margin-left: -35px;
+	background: linear-gradient(90deg, transparent, rgba(255, 245, 255, 0.07) 40%, rgba(255, 255, 255, 0.22) 50%, rgba(255, 245, 255, 0.07) 60%, transparent);
+}
+.ava-particule {
+	position: absolute; bottom: -10px; border-radius: 50%;
+	animation-name: ava-monte; animation-timing-function: linear; animation-iteration-count: infinite;
+}
+@keyframes ava-monte {
+	0% { transform: translateY(0); opacity: 0; }
+	15% { opacity: 1; }
+	85% { opacity: 1; }
+	100% { transform: translateY(-105vh); opacity: 0; }
+}
+/* Le logo à la place exacte de celui du jeu (écran de connexion, déjà connecté) : un cadre de 294 × 360 points du jeu,
+   au milieu de l'écran ; la taille d'un point (--s) est calculée comme dans le jeu (720 × 1280, « expand »). La barre
+   est là où seront les lettres A V A : quand le jeu démarre, la flamme ne bouge pas et la barre devient « AVA ». */
+#ava-logo {
+	position: absolute; left: 50%; top: 50%;
+	width: calc(294px * var(--s, 0.54)); height: calc(360px * var(--s, 0.54));
+	margin-left: calc(-147px * var(--s, 0.54)); margin-top: calc(-180px * var(--s, 0.54));
+}
+#ava-logo > svg {
+	position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 50% 32%;
+	animation: ava-vacille 2.4s ease-in-out infinite;
+}
+@keyframes ava-vacille {
+	0%, 100% { transform: scale(1, 1); }
+	50% { transform: scale(1.012, 0.99); }
+}
+.ava-etincelle {
+	position: absolute; width: 5px; height: 5px; border-radius: 50%; top: 40%;
+	animation: ava-etincelle 1.8s ease-out infinite;
+}
+@keyframes ava-etincelle {
+	0% { transform: translate(0, 0) scale(1); opacity: 0; }
+	20% { opacity: 1; }
+	100% { transform: translate(var(--dx), -80px) scale(0.3); opacity: 0; }
+}
+#status-progress {
+	position: absolute; left: 21%; width: 58%; top: 81%; height: 13px; margin-top: -6px; border-radius: 10px;
+	background: rgba(10, 8, 32, 0.8); border: 1.5px solid rgba(233, 221, 255, 0.55);
+	box-shadow: 0 0 16px rgba(180, 140, 255, 0.25); overflow: hidden; display: none;
+}
+#ava-plein {
+	position: absolute; left: 0; top: 0; bottom: 0; width: 6%; border-radius: 10px;
+	background: linear-gradient(90deg, #FFD24A, #FFF3C4 50%, #B57BFF);
+	box-shadow: 0 0 12px rgba(255, 230, 180, 0.7); transition: width 0.25s ease-out;
+}
+#ava-plein::after {
+	content: ''; position: absolute; top: 0; bottom: 0; width: 40px; left: -40px;
+	background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+	animation: ava-reflet 1.4s linear infinite;
+}
+@keyframes ava-reflet { to { left: 110%; } }
+#ava-texte {
+	position: absolute; left: -40px; right: -40px; top: 100%; margin-top: 4px; text-align: center;
+	color: #EADCFF; font-size: 14px; font-weight: bold; letter-spacing: 1px; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+#status-notice {
+	display: none;
+	background-color: #5b3943;
+	border-radius: 0.5rem;
+	border: 1px solid #9b3943;
+	color: #e0e0e0;
+	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
+	line-height: 1.3;
+	margin: 0 2rem;
+	overflow: hidden;
+	padding: 1rem;
+	text-align: center;
+	z-index: 2;
+}
+		</style>
+		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
+<link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
+<script>(function(){var d=Object.getOwnPropertyDescriptor(window,"devicePixelRatio")||Object.getOwnPropertyDescriptor(Window.prototype,"devicePixelRatio");if(d&&d.get){Object.defineProperty(window,"devicePixelRatio",{configurable:true,get:function(){return Math.min(2,d.get.call(window)||1);}});}})();(function(){var f=window.fetch;window.fetch=function(u,o){var t=typeof u==="string"?u:(u&&u.url)||"";if(/\.(pck|wasm)(\?|$)/.test(t)){o=Object.assign({},o||{},{cache:"no-cache"});}return f.call(window,u,o);};})();(function(){var v="?v=ether2";document.querySelectorAll('link[rel="icon"],link[rel="apple-touch-icon"]').forEach(function(l){l.href=l.getAttribute("href")+v;});})();(function(){try{if(screen.orientation&&screen.orientation.lock){screen.orientation.lock("portrait").catch(function(){});}}catch(e){}var css="#ava-tourner{display:none;position:fixed;inset:0;z-index:99999;background:#0d0b24;color:#ece8ff;font:600 22px system-ui,-apple-system,sans-serif;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:22px}#ava-tourner i{display:block;width:46px;height:78px;border:5px solid #ffd34d;border-radius:10px;animation:ava-t 1.8s ease-in-out infinite}@keyframes ava-t{0%,20%{transform:rotate(-90deg)}60%,100%{transform:rotate(0)}}@media (orientation:landscape) and (max-height:600px){#ava-tourner{display:flex}}";var st=document.createElement("style");st.textContent=css;document.head.appendChild(st);document.addEventListener("DOMContentLoaded",function(){var d=document.createElement("div");d.id="ava-tourner";d.innerHTML="<i></i><div>Tournez votre téléphone<br>pour jouer à AVA</div>";document.body.appendChild(d);});})();</script>
+	</head>
+	<body>
+		<canvas id="canvas">
+			Your browser does not support the canvas tag.
+		</canvas>
+
+		<noscript>
+			Your browser does not support JavaScript.
+		</noscript>
+
+		<div id="status">
+			<div id="ava-fond-ombre"></div>
+			<div id="ava-fond-lumiere"></div>
+			<div id="ava-frontiere"></div>
+			<div id="ava-particules"></div>
+			<div id="ava-logo">
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 98 120" preserveAspectRatio="xMidYMid meet"><defs><radialGradient id="lo"><stop offset="0" stop-color="#FFD34D" stop-opacity="0.75"/><stop offset="1" stop-color="#FFD34D" stop-opacity="0"/></radialGradient><radialGradient id="lv"><stop offset="0" stop-color="#A45CFF" stop-opacity="0.8"/><stop offset="1" stop-color="#A45CFF" stop-opacity="0"/></radialGradient><linearGradient id="lettres" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFE07A"/><stop offset="0.5" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D9B8FF"/></linearGradient><clipPath id="lvg"><path d="M -5 -30 L -4.2 -9 L -1.5 -3.5 C -0.4 -0.6 4 1.6 3.8 6 C 3.6 10.2 -0.4 12 -0.6 16 C -0.7 18 -0.3 19.3 0 20 L 0 30 L -30 30 L -30 -30 Z"/></clipPath><clipPath id="lvd"><path d="M -5 -30 L -4.2 -9 L -1.5 -3.5 C -0.4 -0.6 4 1.6 3.8 6 C 3.6 10.2 -0.4 12 -0.6 16 C -0.7 18 -0.3 19.3 0 20 L 0 30 L 30 30 L 30 -30 Z"/></clipPath><linearGradient id="lvcb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FFF1C4"/></linearGradient><linearGradient id="lvbb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE07A"/><stop offset="1" stop-color="#F0A21E"/></linearGradient><linearGradient id="lvcv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C49BFF"/><stop offset="1" stop-color="#7A3BE6"/></linearGradient><linearGradient id="lvbv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6A30C8"/><stop offset="1" stop-color="#3E1688"/></linearGradient></defs><ellipse cx="36.4" cy="36" rx="30" ry="31.5" fill="url(#lo)"/><ellipse cx="61.6" cy="36" rx="30" ry="31.5" fill="url(#lv)"/><g transform="translate(49 38) scale(1.45)"><g transform="scale(1 1.06)"><g clip-path="url(#lvg)"><path d="M 0 -21 C 5 -13 14 -8 14 4 C 14 13 7.5 20 0 20 C -7.5 20 -14 13 -14 4 C -14 -3 -10 -8 -6.5 -12 C -6 -7 -4 -4.5 -1.5 -3.5 C -3 -10 -2 -16 0 -21 Z" fill="url(#lvbb)"/><path d="M 1.1 -14.2 C 4 -9.8 10.8 -5.6 10.8 4 C 10.8 11.8 6 16.8 0 16.8 C -6 16.8 -10.8 11.8 -10.8 4 C -10.8 -0.6 -9.2 -3.8 -7.6 -5.9 C -6.7 -3.2 -4.5 -0.9 -0.9 -0.5 C -0.1 -1.1 0.7 -3 0.9 -5 C 0.9 -8.5 0.6 -11.5 1.1 -14.2 Z" fill="url(#lvcb)"/><path d="M 2.2 1.06 C 3.9 3.78 6.96 5.48 6.96 9.56 C 6.96 12.62 4.75 15 2.2 15 C -0.35 15 -2.56 12.62 -2.56 9.56 C -2.56 7.18 -1.2 5.48 -0.01 4.12 C 0.16 5.82 0.84 6.67 1.69 7.01 C 1.18 4.8 1.52 2.76 2.2 1.06 Z" fill="#FFE58A"/></g><g clip-path="url(#lvd)"><path d="M 0 -21 C 5 -13 14 -8 14 4 C 14 13 7.5 20 0 20 C -7.5 20 -14 13 -14 4 C -14 -3 -10 -8 -6.5 -12 C -6 -7 -4 -4.5 -1.5 -3.5 C -3 -10 -2 -16 0 -21 Z" fill="url(#lvbv)"/><path d="M 1.1 -14.2 C 4 -9.8 10.8 -5.6 10.8 4 C 10.8 11.8 6 16.8 0 16.8 C -6 16.8 -10.8 11.8 -10.8 4 C -10.8 -0.6 -9.2 -3.8 -7.6 -5.9 C -6.7 -3.2 -4.5 -0.9 -0.9 -0.5 C -0.1 -1.1 0.7 -3 0.9 -5 C 0.9 -8.5 0.6 -11.5 1.1 -14.2 Z" fill="url(#lvcv)"/><path d="M 2.2 1.06 C 3.9 3.78 6.96 5.48 6.96 9.56 C 6.96 12.62 4.75 15 2.2 15 C -0.35 15 -2.56 12.62 -2.56 9.56 C -2.56 7.18 -1.2 5.48 -0.01 4.12 C 0.16 5.82 0.84 6.67 1.69 7.01 C 1.18 4.8 1.52 2.76 2.2 1.06 Z" fill="#E6D2FF"/><path d="M 8.4 9.5 C 9 6.5 8.4 3.2 6.6 0.6" fill="none" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/></g><path d="M -8.6 8.5 C -9.2 4.5 -8 0.8 -5.8 -1.6" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/><path d="M -1.5 -3.5 C -0.4 -0.6 4 1.6 3.8 6 C 3.6 10.2 -0.4 12 -0.6 16 C -0.7 18 -0.3 19.3 0 20" fill="none" stroke="#1B1433" stroke-width="1.0613207547169812" stroke-linecap="round" stroke-linejoin="round"/><path d="M 0 -21 C 5 -13 14 -8 14 4 C 14 13 7.5 20 0 20 C -7.5 20 -14 13 -14 4 C -14 -3 -10 -8 -6.5 -12 C -6 -7 -4 -4.5 -1.5 -3.5 C -3 -10 -2 -16 0 -21 Z" fill="none" stroke="#1B1433" stroke-width="1.6981132075471699" stroke-linejoin="round"/></g></g></svg>
+				<div id="status-progress"><div id="ava-plein"></div></div>
+				<div id="ava-texte">Chargement…</div>
+			</div>
+			<div id="status-notice"></div>
+		</div>
+
+		<script>
+(function () {
+	const zone = document.getElementById('ava-particules');
+	for (let k = 0; k < 46; k++) {
+		const p = document.createElement('span');
+		const lumiere = k % 2 === 0;
+		const taille = 2 + Math.random() * 4;
+		p.className = 'ava-particule';
+		p.style.left = (lumiere ? Math.random() * 48 : 52 + Math.random() * 48) + '%';
+		p.style.width = p.style.height = taille + 'px';
+		const clair = Math.random() < 0.35;
+		const c = lumiere ? (clair ? '#FFF6D0' : '#FFD34D') : (clair ? '#E6D2FF' : '#B57BFF');
+		p.style.background = c;
+		p.style.boxShadow = '0 0 ' + (taille * 3) + 'px ' + c;
+		p.style.animationDuration = (7 + Math.random() * 9) + 's';
+		p.style.animationDelay = (-Math.random() * 14) + 's';
+		zone.appendChild(p);
+	}
+	const logo = document.getElementById('ava-logo');
+	const taille = () => document.documentElement.style.setProperty('--s', Math.min(window.innerWidth / 720, window.innerHeight / 1280));
+	taille();
+	window.addEventListener('resize', taille);
+	const flamme = logo;
+	for (let k = 0; k < 10; k++) {
+		const e = document.createElement('span');
+		const c = k % 2 === 0 ? '#FFE58A' : '#D9B8FF';
+		e.className = 'ava-etincelle';
+		e.style.left = (38 + Math.random() * 24) + '%';
+		e.style.background = c;
+		e.style.boxShadow = '0 0 8px ' + c;
+		e.style.setProperty('--dx', (Math.random() * 50 - 25) + 'px');
+		e.style.animationDelay = (Math.random() * 1.8) + 's';
+		e.style.animationDuration = (1.4 + Math.random() * 1.2) + 's';
+		flamme.appendChild(e);
+	}
+}());
+		</script>
+		<script src="index.js"></script>
+		<script>
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":37045032,"index.wasm":39513091},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const GODOT_THREADS_ENABLED = false;
+const engine = new Engine(GODOT_CONFIG);
+
+(function () {
+	const statusOverlay = document.getElementById('status');
+	const statusProgress = document.getElementById('status-progress');
+	const statusNotice = document.getElementById('status-notice');
+
+	let initializing = true;
+	let statusMode = '';
+
+	function setStatusMode(mode) {
+		if (statusMode === mode || !initializing) {
+			return;
+		}
+		if (mode === 'hidden') {
+			statusOverlay.remove();
+			initializing = false;
+			return;
+		}
+		statusOverlay.style.visibility = 'visible';
+		statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
+		statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
+		statusMode = mode;
+	}
+
+	function setStatusNotice(text) {
+		while (statusNotice.lastChild) {
+			statusNotice.removeChild(statusNotice.lastChild);
+		}
+		const lines = text.split('\n');
+		lines.forEach((line) => {
+			statusNotice.appendChild(document.createTextNode(line));
+			statusNotice.appendChild(document.createElement('br'));
+		});
+	}
+
+	function displayFailureNotice(err) {
+		console.error(err);
+		if (err instanceof Error) {
+			setStatusNotice(err.message);
+		} else if (typeof err === 'string') {
+			setStatusNotice(err);
+		} else {
+			setStatusNotice('An unknown error occurred.');
+		}
+		setStatusMode('notice');
+		initializing = false;
+	}
+
+	const missing = Engine.getMissingFeatures({
+		threads: GODOT_THREADS_ENABLED,
+	});
+
+	if (missing.length !== 0) {
+		if (GODOT_CONFIG['serviceWorker'] && GODOT_CONFIG['ensureCrossOriginIsolationHeaders'] && 'serviceWorker' in navigator) {
+			let serviceWorkerRegistrationPromise;
+			try {
+				serviceWorkerRegistrationPromise = navigator.serviceWorker.getRegistration();
+			} catch (err) {
+				serviceWorkerRegistrationPromise = Promise.reject(new Error('Service worker registration failed.'));
+			}
+			// There's a chance that installing the service worker would fix the issue
+			Promise.race([
+				serviceWorkerRegistrationPromise.then((registration) => {
+					if (registration != null) {
+						return Promise.reject(new Error('Service worker already exists.'));
+					}
+					return registration;
+				}).then(() => engine.installServiceWorker()),
+				// For some reason, `getRegistration()` can stall
+				new Promise((resolve) => {
+					setTimeout(() => resolve(), 2000);
+				}),
+			]).then(() => {
+				// Reload if there was no error.
+				window.location.reload();
+			}).catch((err) => {
+				console.error('Error while registering service worker:', err);
+			});
+		} else {
+			// Display the message as usual
+			const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
+			displayFailureNotice(missingMsg + missing.join('\n'));
+		}
+	} else {
+		setStatusMode('progress');
+		engine.startGame({
+			'onProgress': function (current, total) {
+				// (un dernier avancement peut arriver après la disparition de l'écran de chargement)
+				const plein = document.getElementById('ava-plein');
+				const texte = document.getElementById('ava-texte');
+				if (current > 0 && total > 0 && plein && texte) {
+					const part = Math.min(100, Math.round(100 * current / total));
+					plein.style.width = Math.max(6, part) + '%';
+					texte.textContent = 'Chargement… ' + part + ' %';
+				}
+			},
+		}).then(() => {
+			setStatusMode('hidden');
+		}, displayFailureNotice);
+	}
+}());
+		</script>
+	</body>
+</html>
+
